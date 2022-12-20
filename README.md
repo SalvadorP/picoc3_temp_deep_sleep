@@ -1,11 +1,11 @@
-ESP-IDF template app
+PICO C3 IOT Project
 ====================
 
-This is a template application to be used with [Espressif IoT Development Framework](https://github.com/espressif/esp-idf).
+# Characteristics
+The project will have deep sleep capabilities so it can save power.
 
-Please check [ESP-IDF docs](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) for getting started instructions.
+The project will connect to the wifi so it can send to a local server the readings of the sensors.
 
-*Code in this repository is in the Public Domain (or CC0 licensed, at your option.)
-Unless required by applicable law or agreed to in writing, this
-software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-CONDITIONS OF ANY KIND, either express or implied.*
+The project will have temperature, humidity and pressure sensors connected via i2c.
+
+The battery will be charged via a solar panel so in light hours it will be working using the solar energy, and in night time it will use the battery.

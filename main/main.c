@@ -16,6 +16,7 @@
 #endif
 #include "esp_http_client.h"
 #include "aht.h"
+#include "bmp180.h"
 #include "bmp280.h"
 #include "esp_err.h"
 
@@ -43,7 +44,8 @@ RTC_DATA_ATTR int bootCount = 0;
 
 float temperature = 0.0;
 float humidity = 0.0;
-float pressure = 1050.0;
+// uint32_t pressure = 1050;
+float pressure = 1050;
 
 static const char *TAG = "HTTP_CLIENT";
 
@@ -167,8 +169,8 @@ static void http_rest_with_url(void)
     esp_http_client_handle_t client = esp_http_client_init(&config);
 
     // POST
-    // char *post_data = "{\"device\":\"Terraza\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\",\"pressure\":\"%.2f\"}";
-    // snprintf(post_data, strlen(post_data), "{\"device\":\"Terraza\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\",\"pressure\":\"%.2f\"}", temperature, humidity, pressure);
+    // char *post_data = "{\"device\":\"Terraza\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\",\"pressure\":\"%d\"}";
+    // snprintf(post_data, strlen(post_data), "{\"device\":\"Terraza\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\",\"pressure\":\"%d\"}", temperature, humidity, pressure);
     esp_http_client_set_url(client, "http://homestats.test/api/home/test");
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
@@ -224,6 +226,64 @@ void measure_task(void *pvParameters)
     // exit(1);
 }
 
+
+// void measure_bmp180(void *pvParameters)
+// {
+//     bmp180_dev_t dev;
+//     memset(&dev, 0, sizeof(bmp180_dev_t)); // Zero descriptor
+
+//     ESP_ERROR_CHECK(bmp180_init_desc(&dev, 0, CONFIG_EXAMPLE_I2C_MASTER_SDA, CONFIG_EXAMPLE_I2C_MASTER_SCL));
+//     ESP_ERROR_CHECK(bmp180_init(&dev));
+
+//     float temp;
+
+//     esp_err_t res = bmp180_measure(&dev, &temp, &pressure, BMP180_MODE_STANDARD);
+//     if (res != ESP_OK) {
+//         ESP_LOGI(TAG, "Sensor calibrated %d\n", res);
+//     } else {
+//         /* float is used in printf(). you need non-default configuration in
+//             * sdkconfig for ESP8266, which is enabled by default for this
+//             * example. see sdkconfig.defaults.esp8266
+//             */
+//         ESP_LOGI(TAG, "Temperature: %.2f degrees Celsius; Pressure: %" PRIu32 " Pa\n", temp, pressure);
+//     }
+//     vTaskDelay(pdMS_TO_TICKS(10000));
+// }
+
+
+void measure_bmp280(void *pvParameters)
+{
+    bmp280_params_t params;
+    bmp280_init_default_params(&params);
+    bmp280_t dev;
+    memset(&dev, 0, sizeof(bmp280_t));
+
+    ESP_ERROR_CHECK(bmp280_init_desc(&dev, BMP280_I2C_ADDRESS_0, 0, CONFIG_EXAMPLE_I2C_MASTER_SDA, CONFIG_EXAMPLE_I2C_MASTER_SCL));
+    ESP_ERROR_CHECK(bmp280_init(&dev, &params));
+
+    bool bme280p = dev.id == BME280_CHIP_ID;
+    ESP_LOGI(TAG, "BMP280: found %s\n", bme280p ? "BME280" : "BMP280");
+
+    vTaskDelay(pdMS_TO_TICKS(500));
+    if (bmp280_read_float(&dev, &temperature, &pressure, &humidity) != ESP_OK)
+    {
+        ESP_LOGI(TAG, "Temperature/pressure reading failed\n");
+    }
+
+    /* float is used in printf(). you need non-default configuration in
+        * sdkconfig for ESP8266, which is enabled by default for this
+        * example. see sdkconfig.defaults.esp8266
+        */
+    ESP_LOGI(TAG, "Pressure: %.2f Pa, Temperature: %.2f C", pressure, temperature);
+    if (bme280p) {
+        ESP_LOGI(TAG, ", Humidity: %.2f\n", humidity);
+    } else {
+        ESP_LOGI(TAG, "\n");
+    }
+
+}
+
+
 /**
  * @brief Main App code. HEre we invoke all other functions.
  *
@@ -252,6 +312,8 @@ void app_main(void)
     // xTaskCreatePinnedToCore(measure_task, TAG, configMINIMAL_STACK_SIZE * 8, NULL, 5, NULL, APP_CPU_NUM);
     xTaskCreate(&measure_task, "measure_task", 8192, NULL, 5, NULL);
     ESP_LOGI(TAG, "Temperature: %.1f°C, Humidity: %.2f%%", temperature, humidity);
+    xTaskCreate(&measure_bmp280, "measure_bmp280", 8192, NULL, 5, NULL);
+    ESP_LOGI(TAG, "Pressure: %.2f Pa", pressure);
 
     /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
      * Read "Establishing Wi-Fi or Ethernet Connection" section in

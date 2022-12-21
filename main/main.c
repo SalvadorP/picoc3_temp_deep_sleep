@@ -156,8 +156,6 @@ static void http_rest_with_url(void)
      *
      * If URL as well as host and path parameters are specified, values of host and path will be considered.
      */
-    // .query = "device=terraza&temp=25&humidity=50&pressure=1000",
-    // .query = query_buffer,
     esp_http_client_config_t config = {
         .host = "homestats.test",
         .path = "/api/home/test",
@@ -168,30 +166,12 @@ static void http_rest_with_url(void)
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
 
-    // // Set Headers
-    // esp_http_client_set_header(client, "Content-Type", "application/json");
-    // esp_http_client_set_header(client, "Authorization", "Bearer ");
-
-    // ESP_LOGI(TAG, "Client initiated, making a GET to homestats.test");
-    // // GET
-    // esp_err_t err = esp_http_client_perform(client);
-    // if (err == ESP_OK) {
-    //     ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %lld",
-    //             esp_http_client_get_status_code(client),
-    //             esp_http_client_get_content_length(client));
-    // } else {
-    //     ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
-    // }
-    // ESP_LOG_BUFFER_HEX(TAG, local_response_buffer, strlen(local_response_buffer));
-
     // POST
     // char *post_data = "{\"device\":\"Terraza\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\",\"pressure\":\"%.2f\"}";
     // snprintf(post_data, strlen(post_data), "{\"device\":\"Terraza\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\",\"pressure\":\"%.2f\"}", temperature, humidity, pressure);
-    // const char *post_data = "{\"data\":[\"device\":\"Terraza\",\"temp\":\"25\",\"humidity\":\"50\",\"pressure\":\"1000\"]}";
     esp_http_client_set_url(client, "http://homestats.test/api/home/test");
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
-    // esp_http_client_set_header(client, "Authorization: Bearer", "5FM8IA1I7sYu9LcWUdsFbGlYsCB4x316pC7DTOyt");
     esp_http_client_set_header(client, "Authorization", "Bearer 5FM8IA1I7sYu9LcWUdsFbGlYsCB4x316pC7DTOyt");
     // esp_http_client_set_post_field(client, post_data, strlen(post_data));
     esp_http_client_set_post_field(client, query_buffer, strlen(query_buffer));
@@ -229,26 +209,19 @@ void measure_task(void *pvParameters)
 
     bool calibrated;
     ESP_ERROR_CHECK(aht_get_status(&dev, NULL, &calibrated));
-    if (calibrated)
+    if (calibrated) {
         ESP_LOGI(TAG, "Sensor calibrated");
-    else
+    } else {
         ESP_LOGW(TAG, "Sensor not calibrated!");
+    }
+    esp_err_t res = aht_get_data(&dev, &temperature, &humidity);
+    if (res != ESP_OK) {
+        ESP_LOGE(TAG, "Error reading data: %d (%s)", res, esp_err_to_name(res));
+    }
 
-    // float temperature, humidity;
-
-    // while (1)
-    // {
-        esp_err_t res = aht_get_data(&dev, &temperature, &humidity);
-        if (res != ESP_OK)
-            ESP_LOGE(TAG, "Error reading data: %d (%s)", res, esp_err_to_name(res));
-            // ESP_LOGI(TAG, "Temperature: %.1f°C, Humidity: %.2f%%", temperature, humidity);
-        // else
-            // ESP_LOGE(TAG, "Error reading data: %d (%s)", res, esp_err_to_name(res));
-
-// TODO: Find how to exit the task, without waiting that long.
-        vTaskDelay(pdMS_TO_TICKS(10000));
-        // exit(1);
-    // }
+    // TODO: Find how to exit the task, without waiting that long.
+    vTaskDelay(pdMS_TO_TICKS(10000));
+    // exit(1);
 }
 
 /**

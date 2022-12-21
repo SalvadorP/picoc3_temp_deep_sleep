@@ -14,7 +14,6 @@
 #if CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
 #include "esp_crt_bundle.h"
 #endif
-
 #include "esp_http_client.h"
 #include "aht.h"
 #include "bmp280.h"
@@ -147,6 +146,9 @@ static void http_rest_with_url(void)
 {
     ESP_LOGI(TAG, "Inside http_rest_with_url");
     char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER] = {0};
+    char query_buffer[256];
+    snprintf(query_buffer, 256, "device=terraza&temp=%.2f&humidity=%.2f&pressure=%.2f", temperature, humidity, pressure);
+    ESP_LOGI(TAG, "Query Buffer set, %s", query_buffer);
     /**
      * NOTE: All the configuration parameters for http_client must be spefied either in URL or as host and path parameters.
      * If host and path parameters are not set, query parameter will be ignored. In such cases,
@@ -154,50 +156,54 @@ static void http_rest_with_url(void)
      *
      * If URL as well as host and path parameters are specified, values of host and path will be considered.
      */
+    // .query = "device=terraza&temp=25&humidity=50&pressure=1000",
+    // .query = query_buffer,
     esp_http_client_config_t config = {
         .host = "homestats.test",
         .path = "/api/home/test",
-        .query = "device=terraza&temp=25&humidity=50&pressure=1000",
+        // .query = "device=terraza&temp=25&humidity=50&pressure=1000",
         .event_handler = _http_event_handler,
         .user_data = local_response_buffer,        // Pass address of local buffer to get response
         .disable_auto_redirect = true,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
 
-    // Set Headers
-    esp_http_client_set_header(client, "Content-Type", "application/json");
-    esp_http_client_set_header(client, "Authorization", "Bearer ");
+    // // Set Headers
+    // esp_http_client_set_header(client, "Content-Type", "application/json");
+    // esp_http_client_set_header(client, "Authorization", "Bearer ");
 
-    ESP_LOGI(TAG, "Client initiated, making a GET to homestats.test");
-    // GET
-    esp_err_t err = esp_http_client_perform(client);
-    if (err == ESP_OK) {
-        ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %lld",
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client));
-    } else {
-        ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
-    }
-    ESP_LOG_BUFFER_HEX(TAG, local_response_buffer, strlen(local_response_buffer));
-
-    // POST
-    // const char *post_data = "{\"device\":\"Terraza\",\"temp\":\"25\",\"humidity\":\"50\",\"pressure\":\"1000\"}";
-    // // const char *post_data = "{\"data\":[\"device\":\"Terraza\",\"temp\":\"25\",\"humidity\":\"50\",\"pressure\":\"1000\"]}";
-    // esp_http_client_set_url(client, "http://homestats.test/api/home/test");
-    // esp_http_client_set_method(client, HTTP_METHOD_POST);
-    // esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
-    // // esp_http_client_set_header(client, "Authorization: Bearer", "5FM8IA1I7sYu9LcWUdsFbGlYsCB4x316pC7DTOyt");
-    // esp_http_client_set_header(client, "Authorization", "Bearer 5FM8IA1I7sYu9LcWUdsFbGlYsCB4x316pC7DTOyt");
-    // esp_http_client_set_post_field(client, post_data, strlen(post_data));
-
+    // ESP_LOGI(TAG, "Client initiated, making a GET to homestats.test");
+    // // GET
     // esp_err_t err = esp_http_client_perform(client);
     // if (err == ESP_OK) {
-    //     ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %lld",
+    //     ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %lld",
     //             esp_http_client_get_status_code(client),
     //             esp_http_client_get_content_length(client));
     // } else {
-    //     ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
+    //     ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
     // }
+    // ESP_LOG_BUFFER_HEX(TAG, local_response_buffer, strlen(local_response_buffer));
+
+    // POST
+    // char *post_data = "{\"device\":\"Terraza\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\",\"pressure\":\"%.2f\"}";
+    // snprintf(post_data, strlen(post_data), "{\"device\":\"Terraza\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\",\"pressure\":\"%.2f\"}", temperature, humidity, pressure);
+    // const char *post_data = "{\"data\":[\"device\":\"Terraza\",\"temp\":\"25\",\"humidity\":\"50\",\"pressure\":\"1000\"]}";
+    esp_http_client_set_url(client, "http://homestats.test/api/home/test");
+    esp_http_client_set_method(client, HTTP_METHOD_POST);
+    esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
+    // esp_http_client_set_header(client, "Authorization: Bearer", "5FM8IA1I7sYu9LcWUdsFbGlYsCB4x316pC7DTOyt");
+    esp_http_client_set_header(client, "Authorization", "Bearer 5FM8IA1I7sYu9LcWUdsFbGlYsCB4x316pC7DTOyt");
+    // esp_http_client_set_post_field(client, post_data, strlen(post_data));
+    esp_http_client_set_post_field(client, query_buffer, strlen(query_buffer));
+
+    esp_err_t err = esp_http_client_perform(client);
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %lld",
+                esp_http_client_get_status_code(client),
+                esp_http_client_get_content_length(client));
+    } else {
+        ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
+    }
 
     esp_http_client_cleanup(client);
 }

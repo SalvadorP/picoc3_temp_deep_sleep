@@ -1,17 +1,5 @@
 # put here your custom config value
-menu "Example Configuration"
-    config ESP_WIFI_SSID
-        string "WiFi SSID"
-        default "myssid"
-        help
-        SSID (network name) for the example to connect to.
-
-    config ESP_WIFI_PASSWORD
-        string "WiFi Password"
-        default "mypassword"
-        help
-        WiFi password (WPA or WPA2) for the example to use.
-
+menu "Pico C3 TDS Configuration"
     config ESP_HOMESTATS_TOKEN
         string "Token for Homestats app"
         default "Bearer 5FM8IA1I7sYu9LcWUdsFbGlYsCB4x316pC7DTOyt"
@@ -60,4 +48,14 @@ menu "Example Configuration"
         default 18 if IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
         help
             GPIO number for I2C Master data line.
+
+    config LED_STRIP_LEN
+        int "Number of LED pixel"
+        default 1
+
+    config LED_STRIP_GPIO
+        int "GPIO pin number connected to DI"
+        default 7
+        help
+            Choose GPIO number connected to DI (DIN on some products).
 endmenu

@@ -18,6 +18,7 @@
 #include "aht.h"
 #include "bmp280.h"
 #include "esp_err.h"
+#include "esp_wifi.h"
 
 #ifdef CONFIG_EXAMPLE_I2C_ADDRESS_GND
 #define ADDR AHT_I2C_ADDRESS_GND
@@ -147,7 +148,7 @@ static void http_rest_with_url(void)
     ESP_LOGI(TAG, "Inside http_rest_with_url");
     char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER] = {0};
     char query_buffer[256];
-    snprintf(query_buffer, 256, "device=terraza&temp=%.2f&humidity=%.2f&pressure=%.2f", temperature, humidity, pressure);
+    snprintf(query_buffer, 256, "device=escritorio&temp=%.2f&humidity=%.2f&pressure=%.2f", temperature, humidity, pressure);
     ESP_LOGI(TAG, "Query Buffer set, %s", query_buffer);
     /**
      * NOTE: All the configuration parameters for http_client must be spefied either in URL or as host and path parameters.
@@ -166,14 +167,12 @@ static void http_rest_with_url(void)
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
 
-    // POST
-    // char *post_data = "{\"device\":\"Terraza\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\",\"pressure\":\"%.2f\"}";
-    // snprintf(post_data, strlen(post_data), "{\"device\":\"Terraza\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\",\"pressure\":\"%.2f\"}", temperature, humidity, pressure);
     esp_http_client_set_url(client, "http://homestats.test/api/home/test");
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
-    esp_http_client_set_header(client, "Authorization", "Bearer 5FM8IA1I7sYu9LcWUdsFbGlYsCB4x316pC7DTOyt");
-    // esp_http_client_set_post_field(client, post_data, strlen(post_data));
+
+    esp_http_client_set_header(client, "Authorization", CONFIG_ESP_HOMESTATS_TOKEN);
+
     esp_http_client_set_post_field(client, query_buffer, strlen(query_buffer));
 
     esp_err_t err = esp_http_client_perform(client);
@@ -252,6 +251,10 @@ void app_main(void)
     // xTaskCreatePinnedToCore(measure_task, TAG, configMINIMAL_STACK_SIZE * 8, NULL, 5, NULL, APP_CPU_NUM);
     xTaskCreate(&measure_task, "measure_task", 8192, NULL, 5, NULL);
     ESP_LOGI(TAG, "Temperature: %.1f°C, Humidity: %.2f%%", temperature, humidity);
+
+    // Set the wifi power around to 8.5dbm, design flaw in pico c3.
+    // Also change the value to 10 in config Component config -> PHY config.
+    esp_wifi_set_max_tx_power(34);
 
     /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
      * Read "Establishing Wi-Fi or Ethernet Connection" section in
